@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>定价工作台 · 平台佣金倒推售价</title>
+<style>
+  :root{
+    --accent:#2563eb;--accent2:#38bdf8;
+    --ink:#0f172a;--sub:#64748b;--bg:#f3f6fa;--card:#fff;--line:#e4eaf1;
+    --profit:#059669;--warnb:#b91c1c;--amber:#b45309;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:linear-gradient(180deg,#eaf1f9 0%,#f4f7fb 300px,#f4f7fb 100%);
+    color:var(--ink);padding:20px 20px 48px;-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:960px;margin:0 auto;}
+
+  /* ---------- 头部 ---------- */
+  header{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    background:linear-gradient(90deg,#0b1526 0%,#13294b 60%,#1a3a6b 100%);
+    border-radius:14px;padding:18px 22px;color:#fff;
+    box-shadow:0 8px 24px rgba(11,28,58,.18);
+  }
+  h1{font-size:19px;font-weight:700;letter-spacing:.5px;}
+  h1 .dot{color:var(--accent2);}
+  header .meta{color:#9db4d6;font-size:12px;line-height:1.6;margin-top:3px;}
+  header .spacer{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;}
+  .chip{
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22);
+    border-radius:20px;padding:5px 14px;font-size:12px;color:#dbe7f7;
+  }
+  .chip b{color:var(--accent2);}
+
+  /* ---------- 区块 ---------- */
+  section{margin-top:14px;}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;
+    box-shadow:0 1px 3px rgba(15,23,42,.05);
+  }
+  .card-h{
+    display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+    padding-left:10px;border-left:3px solid var(--accent);margin-bottom:14px;
+  }
+  .card-h h2{font-size:14px;font-weight:700;}
+  .card-h small{color:var(--sub);font-size:12px;font-weight:400;}
+
+  /* ---------- 按钮组 ---------- */
+  .opts{display:flex;flex-wrap:wrap;gap:8px;}
+  .opt{
+    border:1px solid var(--line);background:#fff;border-radius:9px;
+    padding:8px 15px;font-size:13px;cursor:pointer;color:var(--ink);
+    font-family:inherit;transition:all .15s;white-space:nowrap;font-variant-numeric:tabular-nums;
+  }
+  .opt:hover{border-color:var(--accent);color:var(--accent);}
+  .opt.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+  .fadein{animation:fadein .25s ease-out;}
+  @keyframes fadein{from{opacity:.2;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  /* ---------- 表单 ---------- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;}
+  .field label{display:block;font-size:12px;color:var(--sub);margin-bottom:6px;}
+  .field input{
+    width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 12px;
+    font-size:14px;font-family:inherit;color:var(--ink);font-variant-numeric:tabular-nums;
+    background:#fbfdff;
+  }
+  .field input:focus{outline:none;border-color:var(--accent);background:#fff;}
+  .field .unit{position:relative;}
+  .field .unit::after{
+    content:attr(data-u);position:absolute;right:12px;top:50%;transform:translateY(-50%);
+    color:var(--sub);font-size:12px;pointer-events:none;
+  }
+  .hint{font-size:12px;color:var(--sub);margin-top:10px;line-height:1.7;}
+
+  /* ---------- 费率条 ---------- */
+  .rateline{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:13px;color:var(--sub);margin-top:14px;}
+  .rateline input{
+    width:76px;border:1px solid var(--line);border-radius:9px;padding:6px 10px;font-size:14px;
+    text-align:right;background:#fbfdff;font-variant-numeric:tabular-nums;
+  }
+  .rateline input:focus{outline:none;border-color:var(--accent);}
+  .rateline b{color:var(--ink);font-size:15px;font-variant-numeric:tabular-nums;}
+  .badge{
+    display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;
+    background:#eff6ff;color:var(--accent);white-space:nowrap;
+  }
+  .badge.est{background:#fef3c7;color:var(--amber);display:none;}
+
+  /* ---------- 结果卡（深蓝科技风） ---------- */
+  .result{
+    background:linear-gradient(90deg,#0b1526 0%,#13294b 55%,#1a3a6b 100%);
+    border:none;color:#fff;position:relative;overflow:hidden;
+  }
+  .result .card-h{border-left-color:var(--accent2);}
+  .result .card-h h2{color:#dbe7f7;}
+  .result .pulse{position:absolute;inset:0;background:rgba(56,189,248,.22);opacity:0;pointer-events:none;}
+  .result.flash .pulse{animation:pulse .7s ease-out;}
+  @keyframes pulse{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.03)}}
+  .price-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+  .price{
+    font-size:54px;font-weight:800;letter-spacing:1px;line-height:1;
+    color:var(--accent2);font-variant-numeric:tabular-nums;text-shadow:0 0 24px rgba(56,189,248,.45);
+  }
+  .price-row small{font-size:12px;color:#9db4d6;}
+  .rsub{font-size:13px;color:#b9cbe6;margin-top:8px;}
+  .rsub b{color:#fff;}
+  .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px;}
+  .fact{
+    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+    border-radius:10px;padding:10px 14px;position:relative;overflow:hidden;
+  }
+  .fact::before{
+    content:'';position:absolute;left:0;top:0;bottom:0;width:2px;
+    background:linear-gradient(180deg,var(--accent),var(--accent2));
+  }
+  .fact .k{font-size:11px;color:#9db4d6;}
+  .fact .v{font-size:17px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums;}
+  .formula{
+    margin-top:14px;background:rgba(255,255,255,.05);border:1px dashed rgba(56,189,248,.4);
+    border-radius:10px;padding:10px 14px;font-size:12.5px;color:#b9cbe6;line-height:1.9;
+  }
+  .formula b{color:var(--accent2);font-weight:600;}
+
+  .warn{
+    display:none;margin-top:14px;border-radius:10px;padding:10px 14px;font-size:13px;line-height:1.65;
+    background:#fef2f2;border:1px solid #fecaca;color:var(--warnb);
+  }
+  .foot{color:var(--sub);font-size:12px;line-height:1.8;margin-top:16px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1><span class="dot">●</span> 定价工作台</h1>
+      <div class="meta">选平台 + 品类 → 填成本 → 选利润率 → 自动倒推最终售价</div>
+    </div>
+    <div class="spacer">
+      <span class="chip">平台 <b id="chipPlat">小红书</b></span>
+      <span class="chip">净利率 <b id="chipMargin">28%</b></span>
+    </div>
+  </header>
+
+  <!-- 1 平台 -->
+  <section class="card">
+    <div class="card-h"><h2>① 选择平台</h2><small>点击切换，品类与费率联动加载</small></div>
+    <div class="opts" id="platforms"></div>
+  </section>
+
+  <!-- 2 品类 -->
+  <section class="card">
+    <div class="card-h"><h2>② 选择品类</h2><small>18 类目 × 5 平台佣金矩阵</small></div>
+    <div class="opts" id="cats"></div>
+    <div class="rateline">
+      类目佣金 <input type="number" id="rateCustom" step="0.1" min="0" max="30"> %
+      <span>＋ 支付渠道费 0.6%</span>
+      <span id="extraWrap" style="display:none;">＋ 其他固定费率 <b id="extraRate"></b>%</span>
+      <span class="badge">平台费率合计 ≈ <b id="rateTotal">—</b></span>
+      <span class="badge est" id="estTag">非官方核实，请以后台为准</span>
+    </div>
+    <p class="hint">数据状态：小红书列=官方费率标准逐条核对；淘宝列=C店无类目佣金、仅0.6%基础软件服务费（已含在费率合计中；年确收≤12万全额返还；天猫店需自行在费率框加2%-8%类目佣金）；拼多多列=官方0.6%基础服务费（先用后付为1%，开百亿补贴需自行加1%-3%）。抖音/快手列为二手资料，官方类目表在商家登录墙后，选中显示黄色提醒；抖音计费基数含运费、商家券不计入，2026年用千川·乘方的订单费率降至0.6%。</p>
+  </section>
+
+  <!-- 3 成本 -->
+  <section class="card">
+    <div class="card-h"><h2>③ 填写成本</h2><small>改动任意一项，售价即时重算</small></div>
+    <div class="grid">
+      <div class="field"><label>商品进价（元/件）</label><input type="number" id="cost" value="15" step="0.1" min="0"></div>
+      <div class="field"><label>单件运费（元，快递单程）</label><input type="number" id="ship" value="3.5" step="0.1" min="0"></div>
+      <div class="field"><label>包装耗材（元/件）</label><input type="number" id="pack" value="0.8" step="0.1" min="0"></div>
+      <div class="field"><label>退货率（%）</label><input type="number" id="refund" value="17" step="0.1" min="0" max="100"></div>
+    </div>
+    <div class="grid" style="margin-top:14px;">
+      <div class="field unit" data-u="%"><label>推广费占售价比例（%，不填默认 14）</label><input type="number" id="ads" value="14" step="1" min="0" max="80"></div>
+      <div class="field" style="grid-column:span 2;min-width:260px;">
+        <label>目标净利率（不选默认 28%）</label>
+        <div class="opts" id="margins"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 结果 -->
+  <section class="card result" id="resultCard">
+    <div class="pulse"></div>
+    <div class="card-h"><h2>④ 最终建议售价</h2><small style="color:#9db4d6;">自动弹出 · x.9 心理尾数</small></div>
+    <div id="resultBody"><p class="rsub">填写完成后自动出价，改动任意一项即时重算。</p></div>
+  </section>
+
+  <div class="warn" id="warn"></div>
+
+  <p class="foot">
+    口径说明：固定成本 = 进价 + 运费 + 包装 + 退款均摊；退款均摊（每成功单）= 退货率 ÷（1−退货率）×（来回运费 + 包装），货可退回再卖、不亏货。平台费率按各官方规则：小红书=（货款实付+平台补贴）×费率不含运费；抖音=实付（含运费）+主播券/平台券；淘宝=确收成交金额×0.6%（确认收货后退款不退）；拼多多=（实付+平台优惠）×0.6%（先用后付1%）。退款退费差异：小红书/抖音佣金退还、拼多多基础费不退、淘宝0.6%不退。数据来源：小红书《2025基础技术服务费费率标准》（2026-05-12生效）、淘宝商家服务大厅、拼多多《技术服务费收费规则》（2023-03-12修订）、抖音电商学习中心《2026基础技术服务费费率标准》（2026-07-15，需登录看全表）。
+  </p>
+</div>
+
+<script>
+/* ---------- 数据 ----------
+   小红书列：官方《2025小红书基础技术服务费费率标准》(2026-05-12生效)逐条核对
+   淘宝列：官方确认——C店无类目佣金，仅0.6%基础软件服务费(在"其他固定费率"中体现)；
+           天猫店另收类目佣金2%-8%，开天猫需自行改费率框
+   拼多多列：官方规则——普通订单无类目佣金，仅0.6%基础服务费(先用后付为1%)
+   抖音/快手列：官方费率表在商家登录墙后，未核实，选中显示黄色提醒 */
+const CATS = [
+  {name:"香薰/家居香氛",   rates:{"小红书":2.5,"抖音":3,  "快手":2, "淘宝":0, "拼多多":0}},
+  {name:"居家日用",        rates:{"小红书":5,  "抖音":3,  "快手":2, "淘宝":0, "拼多多":0}},
+  {name:"美妆个护",        rates:{"小红书":4,  "抖音":4,  "快手":5, "淘宝":0, "拼多多":0}},
+  {name:"服饰鞋包",        rates:{"小红书":5,  "抖音":4,  "快手":2, "淘宝":0, "拼多多":0}},
+  {name:"食品/零食",       rates:{"小红书":2,  "抖音":3,  "快手":2, "淘宝":0, "拼多多":0}},
+  {name:"粮油/生鲜",       rates:{"小红书":2,  "抖音":3,  "快手":2, "淘宝":0, "拼多多":0}},
+  {name:"3C数码",          rates:{"小红书":2,  "抖音":2.5,"快手":2, "淘宝":0, "拼多多":0}},
+  {name:"家电",            rates:{"小红书":2,  "抖音":3,  "快手":2, "淘宝":0, "拼多多":0}},
+  {name:"母婴用品",        rates:{"小红书":2,  "抖音":3,  "快手":2, "淘宝":0, "拼多多":0}},
+  {name:"玩具/童车",       rates:{"小红书":5,  "抖音":3,  "快手":2, "淘宝":0, "拼多多":0}},
+  {name:"运动户外",        rates:{"小红书":5,  "抖音":3,  "快手":2, "淘宝":0, "拼多多":0}},
+  {name:"珠宝饰品",        rates:{"小红书":5,  "抖音":5,  "快手":5, "淘宝":0, "拼多多":0}},
+  {name:"宠物用品",        rates:{"小红书":5,  "抖音":3,  "快手":2, "淘宝":0, "拼多多":0}},
+  {name:"图书/文具",       rates:{"小红书":2,  "抖音":2,  "快手":1, "淘宝":0, "拼多多":0}},
+  {name:"汽车用品",        rates:{"小红书":5,  "抖音":3,  "快手":2, "淘宝":0, "拼多多":0}},
+  {name:"保健/滋补",       rates:{"小红书":3,  "抖音":5,  "快手":3, "淘宝":0, "拼多多":0}},
+  {name:"虚拟资料(模板/文档)", rates:{"小红书":2,"抖音":5, "快手":2, "淘宝":0, "拼多多":0}},
+  {name:"本地生活/服务",   rates:{"小红书":5.7,"抖音":5, "快手":5, "淘宝":0, "拼多多":0}}
+];
+/* 小红书列备注：珠宝/贵金属按结算单价阶梯1%-5%；宠物主粮2.5%；香薰机归生活电器2% */
+const PLATFORMS = ["小红书","抖音","快手","淘宝","拼多多"];
+/* 平台特有的其他固定费率（%）：淘宝=0.6%基础软件服务费（退货不退） */
+const EXTRA = {"淘宝":0.6};
+const PAY_RATE = 0.6;
+const MARGIN_OPTS = [20,25,28,30,35];
+
+let platform="小红书", cat="香薰/家居香氛", margin=28;
+function catRate(){const c=CATS.find(x=>x.name===cat);return c?c.rates[platform]||0:0;}
+/* 已官方核实的平台：小红书/淘宝/拼多多；抖音/快手的类目表在商家登录墙后 */
+function catEst(){return platform==="抖音"||platform==="快手";}
+function num(id){const v=parseFloat(document.getElementById(id).value);return isNaN(v)?null:v;}
+
+/* ---------- 渲染 ---------- */
+function renderPlat(){
+  const box=document.getElementById("platforms"); box.innerHTML="";
+  PLATFORMS.forEach(p=>{
+    const b=document.createElement("button");
+    b.className="opt"+(p===platform?" on":""); b.textContent=p;
+    b.onclick=()=>{platform=p;renderPlat();renderCat(true);syncRate();recalc();};
+    box.appendChild(b);
+  });
+}
+function renderCat(animate){
+  const box=document.getElementById("cats"); box.innerHTML="";
+  CATS.forEach(c=>{
+    const b=document.createElement("button");
+    b.className="opt"+(c.name===cat?" on":""); b.textContent=c.name;
+    b.onclick=()=>{cat=c.name;renderCat(false);syncRate();recalc();};
+    box.appendChild(b);
+  });
+  if(animate){box.classList.remove("fadein");void box.offsetWidth;box.classList.add("fadein");}
+}
+function renderMargins(){
+  const box=document.getElementById("margins"); box.innerHTML="";
+  MARGIN_OPTS.forEach(v=>{
+    const b=document.createElement("button");
+    b.className="opt"+(v===margin?" on":""); b.textContent=v+"%";
+    b.onclick=()=>{margin=v;renderMargins();recalc();}; box.appendChild(b);
+  });
+  const b=document.createElement("button");
+  b.className="opt"; b.textContent="自定义";
+  b.onclick=()=>{const v=parseFloat(prompt("输入目标净利率（%）：")); if(v>0&&v<90){margin=Math.round(v*10)/10;renderMargins();recalc();}};
+  box.appendChild(b);
+  document.getElementById("chipMargin").textContent=margin+"%";
+}
+function syncRate(){
+  document.getElementById("rateCustom").value=catRate();
+  document.getElementById("estTag").style.display=catEst()?"inline":"none";
+  const ex=EXTRA[platform]||0;
+  document.getElementById("extraWrap").style.display=ex?"inline":"none";
+  document.getElementById("extraRate").textContent=ex;
+  document.getElementById("chipPlat").textContent=platform;
+  updateTotal();
+}
+function updateTotal(){
+  const r=parseFloat(document.getElementById("rateCustom").value)||0;
+  const ex=EXTRA[platform]||0;
+  document.getElementById("rateTotal").textContent=(r+PAY_RATE+ex).toFixed(1)+"%";
+}
+
+/* ---------- 核心计算 ---------- */
+function recalc(){
+  updateTotal();
+  const cost=num("cost"), ship=num("ship"), pack=num("pack")??0;
+  const refund=num("refund"), ads=num("ads")??14;
+  const rateC=parseFloat(document.getElementById("rateCustom").value)||0;
+  const ex=EXTRA[platform]||0;
+  const card=document.getElementById("resultCard");
+  const body=document.getElementById("resultBody");
+  const warn=document.getElementById("warn"); warn.style.display="none";
+
+  if(cost===null||refund===null||refund<0||refund>=100){
+    body.innerHTML='<p class="rsub">请先填写进价和退货率（0–100 之间）。</p>';return;
+  }
+  const denom=1-(rateC+PAY_RATE+ex)/100-ads/100-margin/100;
+  if(denom<=0.05){
+    warn.style.display="block";
+    warn.textContent="⚠️ 比例成本 + 推广 + 目标净利率已超过或接近 100%，无法定价。请调低推广占比或目标净利率。";
+    body.innerHTML='<p class="rsub">参数无解，请调整比例成本。</p>';return;
+  }
+  // 固定成本
+  const refundLoss=ship*2+pack;                 // 退款单均损失：来回运费+包装（不亏货）
+  const refundShare=refund/100/(1-refund/100)*refundLoss; // 摊到每成功单
+  const fixed=cost+ship+pack+refundShare;
+  const priceRaw=fixed/denom;
+  const priceSug=Math.ceil(priceRaw)-0.1;       // 心理定价：向上取整减 1 毛
+  const price=Math.max(priceSug,priceRaw);      // 保证不低于理论价
+  const feeRate=(rateC+PAY_RATE+ex)/100;
+  const fee=price*feeRate;
+  const profit=price-fixed-fee-price*ads/100;
+  const realMargin=profit/price*100;
+
+  body.innerHTML=`
+    <div class="price-row"><span style="font-size:22px;color:#9db4d6;">¥</span><span class="price">${price.toFixed(1)}</span><small>理论最低价 ¥${priceRaw.toFixed(1)}，已按 x.9 尾数向上取</small></div>
+    <p class="rsub">${platform} · ${cat} · 目标净利率 ${margin}% · 按此价卖每单净赚 <b>¥${profit.toFixed(2)}</b></p>
+    <div class="facts">
+      <div class="fact"><div class="k">每单固定成本</div><div class="v">¥${fixed.toFixed(2)}</div></div>
+      <div class="fact"><div class="k">其中退款均摊</div><div class="v">¥${refundShare.toFixed(2)}</div></div>
+      <div class="fact"><div class="k">平台每单扣费</div><div class="v">¥${fee.toFixed(2)}</div></div>
+      <div class="fact"><div class="k">比例成本合计</div><div class="v">${(feeRate*100+ads).toFixed(1)}%</div></div>
+      <div class="fact"><div class="k">实际净利率</div><div class="v">${realMargin.toFixed(1)}%</div></div>
+    </div>
+    <div class="formula">
+      <b>公式</b>　售价 = 固定成本 ÷（1 − 平台费率 ${(feeRate*100).toFixed(1)}% − 推广 ${ads}% − 净利率 ${margin}%）<br>
+      <b>代入</b>　${fixed.toFixed(2)} ÷ ${denom.toFixed(3)} = ¥${priceRaw.toFixed(2)} → 定价 <b>¥${price.toFixed(1)}</b>
+    </div>`;
+  // 弹出动画
+  card.classList.remove("flash"); void card.offsetWidth; card.classList.add("flash");
+}
+
+/* ---------- 事件绑定 ---------- */
+document.querySelectorAll("#cost,#ship,#pack,#refund,#ads").forEach(el=>el.addEventListener("input",recalc));
+document.getElementById("rateCustom").addEventListener("input",recalc);
+renderPlat(); renderCat(false); renderMargins(); syncRate();
+recalc();
+</script>
+</body>
+</html>

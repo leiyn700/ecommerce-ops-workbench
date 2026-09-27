@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SKU 经营工作台</title>
+<style>
+  :root{
+    --red:#e5484d;--accent:#2563eb;--accent2:#38bdf8;
+    --ink:#0f172a;--sub:#64748b;--bg:#f3f6fa;--card:#fff;--line:#e4eaf1;
+    --profit:#059669;--base:#2563eb;--over:#b45309;--dead:#64748b;--warn:#b91c1c;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:linear-gradient(180deg,#eaf1f9 0%,#f4f7fb 300px,#f4f7fb 100%);
+    color:var(--ink);padding:20px 20px 40px;-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;}
+
+  /* ---------- 头部 ---------- */
+  header{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    background:linear-gradient(90deg,#0b1526 0%,#13294b 60%,#1a3a6b 100%);
+    border-radius:14px;padding:18px 22px;color:#fff;
+    box-shadow:0 8px 24px rgba(11,28,58,.18);
+  }
+  h1{font-size:19px;font-weight:700;letter-spacing:.5px;}
+  h1 .dot{color:var(--accent2);}
+  header .meta{color:#9db4d6;font-size:12px;line-height:1.6;}
+  header .spacer{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;}
+
+  /* ---------- 通用按钮 ---------- */
+  .btn{
+    border:1px solid var(--line);background:#fff;border-radius:9px;
+    padding:8px 16px;font-size:13px;cursor:pointer;color:var(--ink);
+    font-family:inherit;transition:all .15s;white-space:nowrap;
+  }
+  .btn:hover{border-color:var(--accent);color:var(--accent);}
+  .btn.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+  .btn.primary:hover{background:#1d4ed8;border-color:#1d4ed8;color:#fff;}
+  .btn.dark{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.22);color:#dbe7f7;}
+  .btn.dark:hover{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.4);color:#fff;}
+  .btn.mini{padding:5px 12px;font-size:12px;}
+
+  /* ---------- 数据来源条 ---------- */
+  .source{
+    margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:12px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    box-shadow:0 1px 3px rgba(15,23,42,.05);
+  }
+  .badge{
+    display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;
+    background:#eff6ff;color:var(--accent);white-space:nowrap;
+  }
+  .badge.demo{background:#f1f5f9;color:#475569;}
+  .badge.mine{background:#ecfdf5;color:var(--profit);}
+  .src-text{font-size:13px;color:var(--sub);flex:1;min-width:200px;line-height:1.6;}
+  .src-text b{color:var(--ink);font-weight:600;}
+  .src-actions{display:flex;gap:8px;align-items:center;margin-left:auto;}
+
+  /* ---------- 拖拽遮罩 ---------- */
+  .dropmask{
+    position:fixed;inset:0;background:rgba(11,21,38,.55);z-index:99;
+    display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px);
+  }
+  .dropmask.on{display:flex;}
+  .dropmask .box{
+    border:2px dashed rgba(255,255,255,.5);border-radius:20px;padding:56px 72px;
+    color:#fff;font-size:17px;font-weight:600;letter-spacing:.5px;text-align:center;line-height:1.9;
+  }
+  .dropmask .box small{display:block;font-size:13px;font-weight:400;color:#b9cbe6;margin-top:8px;}
+
+  /* ---------- 提示条 ---------- */
+  .tips{margin-top:12px;display:flex;flex-direction:column;gap:8px;}
+  .tip{
+    border-radius:10px;padding:10px 14px;font-size:13px;line-height:1.65;
+    display:flex;gap:9px;align-items:flex-start;
+  }
+  .tip .ic{flex:none;font-weight:700;}
+  .tip.err{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;}
+  .tip.ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#047857;}
+  .tip.hide{display:none;}
+
+  /* ---------- 费用参数面板 ---------- */
+  .fee{
+    margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:16px;display:none;
+  }
+  .fee.on{display:block;}
+  .fee-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;}
+  .field label{display:block;font-size:12px;color:var(--sub);margin-bottom:6px;}
+  .field input{
+    width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 12px;
+    font-size:14px;font-family:inherit;color:var(--ink);font-variant-numeric:tabular-nums;
+    background:#fbfdff;
+  }
+  .field input:focus{outline:none;border-color:var(--accent);background:#fff;}
+  .fee-note{margin-top:12px;font-size:12px;color:var(--sub);line-height:1.75;}
+  .fee-note b{color:#b45309;}
+
+  /* ---------- KPI ---------- */
+  .kpis{
+    margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;
+  }
+  .kpi{
+    background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;
+    box-shadow:0 1px 3px rgba(15,23,42,.05);position:relative;overflow:hidden;
+    transition:box-shadow .15s,transform .15s;
+  }
+  .kpi:hover{box-shadow:0 6px 16px rgba(15,23,42,.10);transform:translateY(-2px);}
+  .kpi::before{
+    content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+    background:linear-gradient(180deg,var(--accent),var(--accent2));
+  }
+  .kpi .t{font-size:12px;color:var(--sub);margin-bottom:6px;}
+  .kpi .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.3px;}
+  .kpi .v.neg{color:var(--red);}
+  .kpi .s{font-size:11px;color:var(--sub);margin-top:5px;line-height:1.5;}
+
+  /* ---------- 区块 ---------- */
+  section{margin-top:14px;}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;
+    box-shadow:0 1px 3px rgba(15,23,42,.05);
+  }
+  .card-h{
+    display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+    padding-left:10px;border-left:3px solid var(--accent);margin-bottom:14px;
+  }
+  .card-h h2{font-size:14px;font-weight:700;}
+  .card-h small{color:var(--sub);font-size:12px;font-weight:400;}
+
+  /* ---------- 建议价卡 ---------- */
+  .adv-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;}
+  .adv{
+    border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#fdfefe;
+    border-left:4px solid var(--dead);position:relative;
+  }
+  .adv.p1{border-left-color:var(--warn);}
+  .adv.p2{border-left-color:var(--over);}
+  .adv.p3{border-left-color:var(--line);}
+  .adv-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px;}
+  .role{
+    display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;
+    background:#f1f5f9;color:var(--dead);
+  }
+  .role.r-profit{background:#ecfdf5;color:var(--profit);}
+  .role.r-base{background:#eff6ff;color:var(--base);}
+  .role.r-over{background:#fffbeb;color:var(--over);}
+  .role.r-warn{background:#fef2f2;color:var(--warn);}
+  .adv-name{font-size:14px;font-weight:600;}
+  .adv-spec{font-size:11px;color:var(--sub);font-variant-numeric:tabular-nums;}
+  .layer{
+    margin-left:auto;font-size:11px;padding:2px 9px;border-radius:20px;
+    background:#f1f5f9;color:#475569;white-space:nowrap;
+  }
+  .adv-act{font-size:12.5px;color:#334155;line-height:1.75;}
+  .adv-sug{
+    margin-top:11px;padding-top:11px;border-top:1px dashed #dbe3ec;
+    font-size:13.5px;font-weight:600;color:var(--base);line-height:1.6;
+  }
+  .adv-sug .lbl{font-size:11px;color:var(--sub);font-weight:400;margin-right:6px;}
+  .adv-nums{
+    margin-top:9px;font-size:11.5px;color:var(--sub);line-height:1.8;
+    font-variant-numeric:tabular-nums;
+  }
+  .adv-nums .sep{color:#cbd5e1;margin:0 5px;}
+
+  /* ---------- 表格 ---------- */
+  .tbl-wrap{overflow:auto;border-radius:10px;border:1px solid var(--line);max-height:560px;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th{
+    position:sticky;top:0;background:#f4f8fd;text-align:left;padding:9px 10px;
+    color:#475569;font-weight:600;border-bottom:1px solid var(--line);white-space:nowrap;z-index:1;
+  }
+  td{padding:9px 10px;border-bottom:1px solid #eef2f7;white-space:nowrap;}
+  tbody tr:hover td{background:#f8fbff;}
+  tbody tr:last-child td{border-bottom:none;}
+  .num{text-align:right;font-variant-numeric:tabular-nums;}
+  .neg{color:var(--red);font-weight:600;}
+  .mono{font-variant-numeric:tabular-nums;}
+  .cell-sug{white-space:normal;max-width:220px;font-size:12px;line-height:1.55;}
+
+  /* ---------- 空态 ---------- */
+  .empty{padding:40px 20px;text-align:center;color:var(--sub);font-size:13px;line-height:1.9;}
+
+  /* ---------- 页脚 ---------- */
+  footer{
+    margin-top:20px;color:var(--sub);font-size:11.5px;line-height:2;
+    background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;
+  }
+  footer b{color:#334155;}
+  footer .row{display:flex;gap:26px;flex-wrap:wrap;}
+  footer .kv{margin-top:8px;}
+  footer .clear{color:#94a3b8;cursor:pointer;text-decoration:underline;float:right;}
+  footer .clear:hover{color:var(--red);}
+
+  @media(max-width:760px){
+    body{padding:12px 12px 30px;}
+    header{padding:15px 16px;}
+    header .spacer{margin-left:0;width:100%;}
+    .kpi .v{font-size:19px;}
+    .adv-list{grid-template-columns:1fr;}
+    .src-actions{margin-left:0;width:100%;}
+    .src-actions .btn{flex:1;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1><span class="dot">●</span> SKU 经营工作台</h1>
+      <div class="meta" id="meta">正在读取…</div>
+    </div>
+    <div class="spacer">
+      <button class="btn dark" id="feeBtn">费用参数</button>
+      <button class="btn dark" id="pickBtn">传数据</button>
+    </div>
+  </header>
+
+  <!-- 数据来源：一行说清「现在看的是谁的数据 + 怎么换」 -->
+  <div class="source">
+    <span class="badge" id="srcBadge">…</span>
+    <span class="src-text" id="srcText"></span>
+    <span class="src-actions">
+      <label class="btn primary" for="fileInput">选择文件</label>
+      <input type="file" id="fileInput" accept=".xlsx,.csv" multiple hidden>
+    </span>
+  </div>
+
+  <div class="tips">
+    <div class="tip ok hide" id="tipOk"><span class="ic">✓</span><span id="tipOkText"></span></div>
+    <div class="tip err hide" id="tipErr"><span class="ic">!</span><span id="tipErrText"></span></div>
+  </div>
+
+  <!-- 费用参数 -->
+  <div class="fee" id="feePanel">
+    <div class="fee-grid">
+      <div class="field">
+        <label>平台扣费（元）</label>
+        <input type="number" id="inPlatformFee" min="0" step="0.01" placeholder="0">
+      </div>
+      <div class="field">
+        <label>推广费（元）</label>
+        <input type="number" id="inAds" min="0" step="0.01" placeholder="0">
+      </div>
+    </div>
+    <div class="fee-note">
+      这两个数订单表里没有，要从千帆账务里看本期实际扣了多少。<b>不填就按 0 算，经营利润会偏高</b>——
+      工作台不会替你编一个佣金比例。改完立即重算，不用重新传表。
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpis" id="kpis"></div>
+
+  <!-- 建议价 -->
+  <section class="card">
+    <div class="card-h">
+      <h2>各款建议价</h2>
+      <small id="advHint"></small>
+    </div>
+    <div class="adv-list" id="advList"></div>
+  </section>
+
+  <!-- 明细 -->
+  <section class="card">
+    <div class="card-h">
+      <h2>SKU 明细</h2>
+      <small id="tblHint"></small>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>商品</th>
+            <th>分层</th>
+            <th>定位</th>
+            <th class="num">净销售额</th>
+            <th class="num">订单</th>
+            <th class="num">件数</th>
+            <th class="num">单均利润</th>
+            <th class="num">履约后利润</th>
+            <th class="num">退款率</th>
+            <th>建议价</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<div class="dropmask" id="dropmask">
+  <div class="box">
+    松开鼠标，把表格放进来
+    <small>订单导出表 + 拿货价参数表，可以一起拖</small>
+  </div>
+</div>
+
+<script>window.__WB_MODULES__ = /*__WB_MODULES__*/;</script>
+
+<script>
+/* ------------------------------------------------------------------
+   模块加载器：把小程序里的 utils/ 原样在浏览器跑起来
+   口径只有一处实现，网页版不再重写一遍算法
+------------------------------------------------------------------ */
+window.WB = (function () {
+  var SRC = window.__WB_MODULES__;
+  var cache = {};
+
+  function nameOf(req) {
+    return String(req).replace(/^.*\//, '').replace(/\.js$/, '');
+  }
+
+  function load(name) {
+    if (cache[name]) return cache[name].exports;
+    var src = SRC[name];
+    if (src === undefined) throw new Error('缺少模块：' + name);
+    var mod = { exports: {} };
+    cache[name] = mod;
+    // 每个模块独立作用域，避免顶层 const 互相污染
+    var fn = new Function('module', 'exports', 'require', src + '\n//# sourceURL=wb/' + name + '.js');
+    fn(mod, mod.exports, function (req) { return load(nameOf(req)); });
+    return mod.exports;
+  }
+
+  return {
+    zip: load('zip-read'),
+    xlsxRead: load('xlsx-read'),
+    sample: load('sample'),
+    ingest: load('ingest'),
+    csv: load('csv'),
+    xlsx: load('xlsx'),
+    compute: load('compute'),
+    advice: load('advice')
+  };
+})();
+</script>
+
+<script>
+/* ------------------------------------------------------------------
+   工作台
+------------------------------------------------------------------ */
+(function () {
+  var WB = window.WB;
+  var buildSnapshot = WB.compute.buildSnapshot;
+  var buildAdvice = WB.advice.buildAdvice;
+  var M2 = WB.advice.money2, M0 = WB.advice.money, NUM = WB.advice.num,
+      PCT = WB.advice.pct, PRICE = WB.advice.price;
+
+  var LS = {
+    fee: 'wb.fee',
+    data: 'wb.data'
+  };
+  var DATA_MAX = 3 * 1024 * 1024;   // 本机存档上限，超了不存，避免撑爆 localStorage
+
+  // 当前状态
+  var state = {
+    source: 'demo',        // demo | mine
+    orders: null,          // ingest.normalize('orders', ...) 的结果
+    params: null,          // ingest.normalize('params', ...) 的结果
+    ordersName: '',
+    paramsName: '',
+    fee: { ads: 0, platformFee: 0 },
+    snap: null,
+    adv: []
+  };
+
+  var ROLE_ORDER = {
+    '待核数据': 1, '滞销款': 2, '先治退款': 3, '过度款': 4, '利润款': 5, '基础款': 6, '常规款': 7
+  };
+
+  // ---------- 本机存档 ----------
+  function readLS(key) {
+    try {
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+  function writeLS(key, val) {
+    try {
+      localStorage.setItem(key, JSON.stringify(val));
+      return true;
+    } catch (e) { return false; }
+  }
+
+  // ---------- 提示 ----------
+  function showTip(kind, text) {
+    var el = document.getElementById(kind === 'err' ? 'tipErr' : 'tipOk');
+    var tx = document.getElementById(kind === 'err' ? 'tipErrText' : 'tipOkText');
+    tx.textContent = text;
+    el.classList.remove('hide');
+    if (kind !== 'err') {
+      setTimeout(function () { el.classList.add('hide'); }, 6000);
+    }
+  }
+  function clearTip() {
+    document.getElementById('tipErr').classList.add('hide');
+    document.getElementById('tipOk').classList.add('hide');
+  }
+
+  // ---------- 文件解析 ----------
+  function extOf(name) {
+    var m = /\.([a-z0-9]+)$/i.exec(String(name || ''));
+    return m ? m[1].toLowerCase() : '';
+  }
+
+  // 判断这是订单表还是参数表：认特征列，不认文件名
+  function detectDocKey(sheets) {
+    var hasCost = false, hasSales = false;
+    for (var i = 0; i < sheets.length; i++) {
+      var head = [];
+      for (var r = 0; r < Math.min(sheets[i].rows.length, 10); r++) {
+        var row = sheets[i].rows[r] || [];
+        for (var c = 0; c < row.length; c++) {
+          head.push(String(row[c] == null ? '' : row[c]).replace(/\s+/g, ''));
+        }
+      }
+      var line = head.join('|');
+      if (/拿货价|拿货成本|成本价|进价|进货价/.test(line)) hasCost = true;
+      if (/商家应收金额/.test(line)) hasSales = true;
+    }
+    if (hasCost && !hasSales) return 'params';
+    if (hasSales) return 'orders';
+    return '';
+  }
+
+  function readCsvSheets(file) {
+    return file.arrayBuffer().then(function (ab) {
+      var buf = new Uint8Array(ab);
+      // 千帆导出的 csv 可能是 GBK，浏览器能解，顺手兜住
+      var text = new TextDecoder('utf-8', { fatal: false }).decode(buf);
+      if (WB.csv.looksBroken(text)) {
+        try {
+          text = new TextDecoder('gbk').decode(buf);
+        } catch (e) { /* 环境不支持 gbk 就保持原样 */ }
+      }
+      if (WB.csv.looksBroken(text)) {
+        throw new Error('这份 csv 编码读不出来，请在千帆里改导 .xlsx 再传');
+      }
+      var rows = WB.csv.parseCsvText(text);
+      if (!rows.length) throw new Error('csv 里没读到数据行');
+      return { sheets: [{ name: 'CSV', rows: rows }], sheetCount: 1 };
+    });
+  }
+
+  function readFile(file) {
+    var ext = extOf(file.name);
+    if (ext === 'csv') return readCsvSheets(file);
+    if (ext === 'xlsx') {
+      return file.arrayBuffer().then(function (ab) {
+        return WB.xlsxRead.readXlsx(ab, WB.xlsx);
+      });
+    }
+    if (ext === 'xls') {
+      return Promise.reject(new Error('这是老版 .xls 格式。请在小红书千帆里导出 .xlsx（或 .csv）再传。'));
+    }
+    return Promise.reject(new Error('只认 .xlsx 和 .csv，这个文件是 .' + (ext || '未知') + '。'));
+  }
+
+  function handleFiles(fileList) {
+    var files = Array.prototype.slice.call(fileList || []);
+    if (!files.length) return Promise.resolve();
+
+    var needOrders = !state.orders || state.source === 'demo';
+    var needParams = !state.params;
+
+    return Promise.all(files.map(function (f) {
+      return readFile(f).then(function (res) {
+        var key = detectDocKey(res.sheets);
+        return { file: f, key: key, res: res };
+      }).catch(function (e) {
+        return { file: f, error: (e && e.message) || '读不出来' };
+      });
+    })).then(function (results) {
+      var errs = [];
+      var gotOrders = null, gotParams = null;
+
+      results.forEach(function (r) {
+        if (r.error) { errs.push(r.file.name + '：' + r.error); return; }
+        if (!r.key) {
+          errs.push(r.file.name + '：认不出这是哪张表（订单表要有「商家应收金额」列，参数表要有「拿货价」列）');
+          return;
+        }
+        if (r.key === 'orders') {
+          if (gotOrders) { errs.push(r.file.name + '：订单表只能传一份，已跳过'); return; }
+          gotOrders = r;
+        } else {
+          if (gotParams) { errs.push(r.file.name + '：参数表只能传一份，已跳过'); return; }
+          gotParams = r;
+        }
+      });
+
+      if (gotOrders) {
+        var o = WB.ingest.normalize('orders', gotOrders.res.sheets);
+        state.orders = o;
+        state.ordersName = gotOrders.file.name;
+      }
+      if (gotParams) {
+        var p = WB.ingest.normalize('params', gotParams.res.sheets);
+        state.params = p;
+        state.paramsName = gotParams.file.name;
+      }
+      if (gotOrders || gotParams) state.source = 'mine';
+
+      if (errs.length && !gotOrders && !gotParams) {
+        throw new Error(errs.join('；'));
+      }
+
+      reconcile();
+      compute();
+      render();
+
+      var okMsg = [];
+      if (gotOrders) okMsg.push('订单表 ' + NUM(state.orders.records.length) + ' 行');
+      if (gotParams) okMsg.push('参数表 ' + NUM((state.params.rows || []).length) + ' 个规格');
+      if (okMsg.length) showTip('ok', '已按 ' + okMsg.join(' + ') + ' 重算完毕。');
+      if (errs.length) showTip('err', errs.join('；'));
+
+      persist();
+    });
+  }
+
+  // 订单换了但参数是上一次的，要按新订单的规格重新匹配一遍
+  function reconcile() {
+    if (!state.orders) return;
+    if (!state.params) {
+      state.params = WB.ingest.normalizeParams([]);
+    }
+  }
+
+  // ---------- 计算 ----------
+  function compute() {
+    if (!state.orders) return;
+    var snap = buildSnapshot({
+      orders: state.orders,
+      params: state.params || {},
+      options: { ads: state.fee.ads, platformFee: state.fee.platformFee }
+    });
+    state.snap = snap;
+    state.adv = buildAdvice(snap.skus);
+  }
+
+  // ---------- 渲染 ----------
+  function renderMeta() {
+    var s = state.snap;
+    var srcs = [];
+    if (state.ordersName) srcs.push('订单 ' + state.ordersName);
+    if (state.paramsName) srcs.push('参数 ' + state.paramsName);
+    document.getElementById('meta').textContent =
+      s.meta.label + ' · 生成于 ' + s.meta.generated +
+      (srcs.length ? ' · ' + srcs.join(' / ') : ' · 内置示例');
+  }
+
+  function renderSource() {
+    var badge = document.getElementById('srcBadge');
+    var text = document.getElementById('srcText');
+    if (state.source === 'mine') {
+      badge.textContent = '你的数据';
+      badge.className = 'badge mine';
+      var parts = [];
+      parts.push('订单表 ' + (state.ordersName || '已读入') + '（' + NUM(state.orders.records.length) + ' 行）');
+      parts.push(state.paramsName
+        ? '参数表 ' + state.paramsName + '（' + NUM((state.params.rows || []).length) + ' 个规格）'
+        : '还没传拿货价参数表，成本按 0 算');
+      text.innerHTML = parts.join(' · ') + ' <b>就存在这台电脑的浏览器里</b>，下次打开还在。';
+    } else {
+      badge.textContent = '示例数据';
+      badge.className = 'badge demo';
+      text.innerHTML = '现在显示的是内置示例（一期完整订单，9 个规格）。' +
+        '<b>把千帆导出的表格拖到页面任意位置</b>，就换成你自己的数据。';
+    }
+  }
+
+  function renderKpis() {
+    var K = state.snap.kpi;
+    var items = [
+      ['净销售额', M0(K.net_sales), '退款行已剔除', false],
+      ['有效订单', NUM(K.orders) + ' 单', '其中退款 ' + NUM(K.refund_orders) + ' 单', false],
+      ['客单价', M2(K.avg_order_value), '净销售额 ÷ 有效订单', false],
+      ['退货额', M0(K.refund_amount), '退款率 ' + PCT(K.refund_rate), true],
+      ['履约后利润', M2(K.post_fulfill_profit), '毛利 ' + M0(K.gross_profit) + '（毛利率 ' + PCT(K.gross_margin) + '）', false],
+      ['经营利润', M2(K.operating_profit), '扣掉平台扣费与推广费后', K.operating_profit < 0]
+    ];
+    document.getElementById('kpis').innerHTML = items.map(function (it) {
+      return '<div class="kpi"><div class="t">' + it[0] + '</div>' +
+        '<div class="v' + (it[3] ? ' neg' : '') + '">' + it[1] + '</div>' +
+        '<div class="s">' + it[2] + '</div></div>';
+    }).join('');
+  }
+
+  function renderAdvice() {
+    var list = state.adv.slice().sort(function (a, b) {
+      var ra = ROLE_ORDER[a.role] || 9, rb = ROLE_ORDER[b.role] || 9;
+      if (ra !== rb) return ra - rb;
+      return b.sales - a.sales;
+    });
+
+    document.getElementById('advHint').textContent =
+      '按「要先处理的」排前面：待核数据 / 滞销 / 先治退款 / 过度款 / 利润款 / 基础款 / 常规款';
+
+    if (!list.length) {
+      document.getElementById('advList').innerHTML = '<div class="empty">还没有数据</div>';
+      return;
+    }
+
+    document.getElementById('advList').innerHTML = list.map(function (s) {
+      var nums = [
+        '销售额 ' + s.salesText,
+        s.ordersText,
+        s.qtyText,
+        '单均 ' + '<span class="' + (s.unitNeg ? 'neg' : '') + '">' + s.unitText + '</span>',
+        '退款 ' + '<span class="' + (s.refundWarn ? 'neg' : '') + '">' + s.refundText + '</span>'
+      ].join('<span class="sep">·</span>');
+
+      return '<div class="adv p' + s.priority + '">' +
+        '<div class="adv-top">' +
+          '<span class="role ' + s.roleClass + '">' + s.role + '</span>' +
+          '<span class="adv-name">' + esc(s.name) + '</span>' +
+          // 零成交的款没有订单行带不出商品名，name 会退回规格号，此时不重复展示
+          (s.spec && s.spec !== s.name ? '<span class="adv-spec">' + esc(s.spec) + '</span>' : '') +
+          '<span class="layer">' + esc(s.layer) + '</span>' +
+        '</div>' +
+        '<div class="adv-act">' + esc(s.act) + '</div>' +
+        '<div class="adv-sug"><span class="lbl">建议到手价</span>' + esc(s.sug) + '</div>' +
+        '<div class="adv-nums">' + nums + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function renderTable() {
+    var list = state.adv.slice().sort(function (a, b) {
+      if (b.sales !== a.sales) return b.sales - a.sales;
+      return 0;
+    });
+    document.getElementById('tblHint').textContent =
+      '按备注计口径：单均利润 = 履约后利润 ÷ 有效订单；退款率 = 退款单 ÷ 该款全部订单';
+
+    document.getElementById('tbody').innerHTML = list.map(function (s) {
+      return '<tr>' +
+        '<td class="mono">' + esc(s.spec) + '</td>' +
+        '<td>' + esc(s.item || (s.name !== s.spec ? s.name : '—')) + '</td>' +
+        '<td>' + esc(s.layer) + '</td>' +
+        '<td><span class="role ' + s.roleClass + '">' + s.role + '</span></td>' +
+        '<td class="num">' + s.salesText + '</td>' +
+        '<td class="num">' + NUM(s.orders) + '</td>' +
+        '<td class="num">' + NUM(s.qty) + '</td>' +
+        '<td class="num' + (s.unitNeg ? ' neg' : '') + '">' + s.unitText + '</td>' +
+        '<td class="num' + (s.post < 0 ? ' neg' : '') + '">' + s.postText + '</td>' +
+        '<td class="num' + (s.refundWarn ? ' neg' : '') + '">' + s.refundText + '</td>' +
+        '<td class="cell-sug">' + esc(s.sug) + '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function renderFee() {
+    document.getElementById('inAds').value = state.fee.ads || '';
+    document.getElementById('inPlatformFee').value = state.fee.platformFee || '';
+  }
+
+  function renderFooter() {
+    var s = state.snap;
+    var src = s.meta.sources || {};
+    document.getElementById('foot').innerHTML =
+      '<div class="row">' +
+        '<div><b>净销售额</b> = 商家应收金额 −（退款/取消行的金额）</div>' +
+        '<div><b>有效订单</b> = 至少有一行未退款的订单</div>' +
+      '</div>' +
+      '<div class="row">' +
+        '<div><b>毛利</b> = 净销售额 − 拿货价 × 件数</div>' +
+        '<div><b>履约后利润</b> = 毛利 − 包裹运费</div>' +
+        '<div><b>经营利润</b> = 履约后利润 − 平台扣费 − 推广费</div>' +
+      '</div>' +
+      '<div class="kv">' +
+        '除退款额与退款率外，所有金额与件数只统计有效行（退款行不重复计入运费与优惠），' +
+        '所以不会出现「一头扣销售额、一头又扣运费」。' +
+        '数据源：订单 ' + NUM(src.orders || 0) + ' 行' +
+        (src.orders_sheet ? '（' + esc(src.orders_sheet) + '）' : '') +
+        ' · 参数 ' + NUM(src.params || 0) + ' 个规格，其中 ' + NUM(src.params_with_cost || 0) + ' 个有拿货价。' +
+        '建议价为规则引擎按本期数据推算的估算值，不是承诺。' +
+      '</div>' +
+      '<div class="kv"><span class="clear" id="clearBtn">清除本机数据，回到示例</span></div>';
+    document.getElementById('clearBtn').addEventListener('click', function () {
+      try {
+        localStorage.removeItem(LS.data);
+        localStorage.removeItem(LS.fee);
+      } catch (e) {}
+      location.reload();
+    });
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function render() {
+    renderMeta();
+    renderSource();
+    renderKpis();
+    renderAdvice();
+    renderTable();
+    renderFooter();
+  }
+
+  // ---------- 存档 ----------
+  function persist() {
+    if (state.source !== 'mine' || !state.orders) return;
+    var payload = {
+      savedAt: Date.now(),
+      orders: {
+        records: state.orders.records,
+        summary: state.orders.summary,
+        sheet: state.orders.sheet,
+        columns: state.orders.columns,
+        truncated: state.orders.truncated
+      },
+      params: state.params,
+      ordersName: state.ordersName,
+      paramsName: state.paramsName
+    };
+    var ok = writeLS(LS.data, payload);
+    if (!ok) {
+      showTip('err', '这期数据太大，存不进浏览器本机（下次打开会回到示例）。这一屏的结论照常可用。');
+    }
+    writeLS(LS.fee, state.fee);
+  }
+
+  // ---------- 重置为示例 ----------
+  function loadDemo() {
+    var input = WB.sample.buildSample();
+    state.source = 'demo';
+    state.orders = input.orders;
+    state.params = input.params;
+    state.ordersName = '';
+    state.paramsName = '';
+    state.fee = { ads: input.options.ads, platformFee: input.options.platformFee };
+    compute();
+    renderFee();
+    render();
+  }
+
+  // ---------- 事件 ----------
+  function bind() {
+    var input = document.getElementById('fileInput');
+    input.addEventListener('change', function () {
+      clearTip();
+      handleFiles(input.files).then(function () {
+        input.value = '';
+      }).catch(function (e) {
+        showTip('err', (e && e.message) || '读文件失败');
+        input.value = '';
+      });
+    });
+
+    document.getElementById('pickBtn').addEventListener('click', function () {
+      input.click();
+    });
+
+    document.getElementById('feeBtn').addEventListener('click', function () {
+      var p = document.getElementById('feePanel');
+      p.classList.toggle('on');
+      this.classList.toggle('on', p.classList.contains('on'));
+    });
+
+    function onFeeChange() {
+      var ads = parseFloat(document.getElementById('inAds').value);
+      var pf = parseFloat(document.getElementById('inPlatformFee').value);
+      state.fee = {
+        ads: isFinite(ads) && ads > 0 ? ads : 0,
+        platformFee: isFinite(pf) && pf > 0 ? pf : 0
+      };
+      compute();
+      renderMeta();
+      renderKpis();
+      renderFooter();
+      writeLS(LS.fee, state.fee);
+    }
+    document.getElementById('inAds').addEventListener('input', onFeeChange);
+    document.getElementById('inPlatformFee').addEventListener('input', onFeeChange);
+
+    // 拖拽：整页接收
+    var depth = 0;
+    var mask = document.getElementById('dropmask');
+    window.addEventListener('dragenter', function (e) {
+      e.preventDefault();
+      depth++;
+      mask.classList.add('on');
+    });
+    window.addEventListener('dragover', function (e) { e.preventDefault(); });
+    window.addEventListener('dragleave', function (e) {
+      e.preventDefault();
+      depth--;
+      if (depth <= 0) { depth = 0; mask.classList.remove('on'); }
+    });
+    window.addEventListener('drop', function (e) {
+      e.preventDefault();
+      depth = 0;
+      mask.classList.remove('on');
+      var files = e.dataTransfer && e.dataTransfer.files;
+      if (!files || !files.length) return;
+      clearTip();
+      handleFiles(files).catch(function (err) {
+        showTip('err', (err && err.message) || '读文件失败');
+      });
+    });
+  }
+
+  // ---------- 启动 ----------
+  function init() {
+    bind();
+    var fee = readLS(LS.fee);
+    var saved = readLS(LS.data);
+
+    if (saved && saved.orders && saved.orders.records && saved.orders.records.length) {
+      state.source = 'mine';
+      state.orders = saved.orders;
+      state.params = saved.params || WB.ingest.normalizeParams([]);
+      state.ordersName = saved.ordersName || '';
+      state.paramsName = saved.paramsName || '';
+      state.fee = fee || { ads: 0, platformFee: 0 };
+      compute();
+      renderFee();
+      render();
+      showTip('ok', '已读回上次那期数据（存在这台电脑上）。要换成新一期，直接拖新表格进来。');
+    } else {
+      loadDemo();
+    }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
